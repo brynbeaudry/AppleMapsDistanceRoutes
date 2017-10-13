@@ -62,6 +62,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         mapView.mapType = MKMapType.standard
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
+        mapView.showsPointsOfInterest = false
         
         // Or, if needed, we can position map in the center of the view
         //mapView.center = view.center
