@@ -26,6 +26,21 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         determineCurrentLocation()
         createMapView()
     }
+    
+    func centerMapOnLocation() {
+        print(userLocation)
+        let center = CLLocationCoordinate2D(latitude: userLocation.coordinate.latitude, longitude: userLocation.coordinate.longitude)
+        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+        mapView.setRegion(region, animated: true)
+    }
+    
+    func dropPinAtUserLocation() {
+        // Drop a pin at user's Current Location
+        let myAnnotation: MKPointAnnotation = MKPointAnnotation()
+        myAnnotation.coordinate = CLLocationCoordinate2DMake(userLocation.coordinate.latitude, userLocation.coordinate.longitude);
+        myAnnotation.title = "Current location"
+        mapView.addAnnotation(myAnnotation)
+    }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -91,16 +106,10 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         // other wise this function will be called every time when user location changes.
         manager.stopUpdatingLocation()
         
-        let center = CLLocationCoordinate2D(latitude: userLocation.coordinate.latitude, longitude: userLocation.coordinate.longitude)
-        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+        centerMapOnLocation()
+        dropPinAtUserLocation()    
         
-        mapView.setRegion(region, animated: true)
         
-        // Drop a pin at user's Current Location
-        let myAnnotation: MKPointAnnotation = MKPointAnnotation()
-        myAnnotation.coordinate = CLLocationCoordinate2DMake(userLocation.coordinate.latitude, userLocation.coordinate.longitude);
-        myAnnotation.title = "Current location"
-        mapView.addAnnotation(myAnnotation)
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error)
