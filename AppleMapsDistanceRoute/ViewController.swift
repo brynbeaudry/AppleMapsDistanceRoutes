@@ -10,7 +10,7 @@ import UIKit
 import CoreLocation
 import MapKit
 
-class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDelegate{
+class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDelegate, UIGestureRecognizerDelegate{
     
     var locationManager:CLLocationManager!
     var userLocation:CLLocation!
@@ -25,6 +25,25 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         // Do any additional setup after loading the view, typically from a nib.
         determineCurrentLocation()
         createMapView()
+        
+        
+        let mapLPRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleMapPress))
+        //Where is the UIElem we're listening for taps? This class.
+        //Where is the function to handle the action defined? In the class of the delegate/order taker
+        mapLPRecognizer.delegate = self //The view is responsible to provide the function. It can modify the necessary data to carry it out
+        mapView.addGestureRecognizer(mapLPRecognizer)
+        //I think all UI Controllers have add/remove gesture regonizers.
+        
+        
+    }
+    
+    @objc func handleMapPress(gestureReconizer: UILongPressGestureRecognizer) {
+        //converts CG Point to LocCoord2d
+        print("In handlemap press")
+        let location = gestureReconizer.location(in: mapView)
+        let coordinate : CLLocationCoordinate2D = mapView.convert(location,toCoordinateFrom: mapView)
+        dropPinAtCoordinate(c: coordinate)
+        
     }
     
     func centerMapOnLocation() {
@@ -39,6 +58,13 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         let myAnnotation: MKPointAnnotation = MKPointAnnotation()
         myAnnotation.coordinate = CLLocationCoordinate2DMake(userLocation.coordinate.latitude, userLocation.coordinate.longitude);
         myAnnotation.title = "Current location"
+        mapView.addAnnotation(myAnnotation)
+    }
+    
+    func dropPinAtCoordinate(c : CLLocationCoordinate2D) {
+        let myAnnotation: MKPointAnnotation = MKPointAnnotation()
+        myAnnotation.coordinate = CLLocationCoordinate2DMake(c.latitude, c.longitude);
+        myAnnotation.title = "Pin at \(c.latitude), \(c.longitude)"
         mapView.addAnnotation(myAnnotation)
     }
 
@@ -107,10 +133,11 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         manager.stopUpdatingLocation()
         
         centerMapOnLocation()
-        dropPinAtUserLocation()    
+        dropPinAtUserLocation()
         
         
     }
+
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error)
     {
