@@ -43,7 +43,6 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         let location = gestureReconizer.location(in: mapView)
         let coordinate : CLLocationCoordinate2D = mapView.convert(location,toCoordinateFrom: mapView)
         dropPinAtCoordinate(c: coordinate)
-        
     }
     
     func centerMapOnLocation() {
