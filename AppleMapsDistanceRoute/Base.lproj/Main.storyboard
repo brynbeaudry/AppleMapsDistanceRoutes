@@ -25,11 +25,23 @@
                                 <rect key="frame" x="0.0" y="623" width="375" height="44"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                                 <items>
-                                    <barButtonItem title="Drive" id="F0W-5K-o3t"/>
+                                    <barButtonItem title="Drive" id="F0W-5K-o3t">
+                                        <connections>
+                                            <action selector="driveBtn:" destination="BYZ-38-t0r" id="83o-Og-dWV"/>
+                                        </connections>
+                                    </barButtonItem>
                                     <barButtonItem width="90" style="plain" systemItem="fixedSpace" id="ya7-do-s56"/>
-                                    <barButtonItem title="Walk" id="O7z-UE-VDx"/>
+                                    <barButtonItem title="Walk" id="O7z-UE-VDx">
+                                        <connections>
+                                            <action selector="walkBtn:" destination="BYZ-38-t0r" id="GY1-D6-6Ox"/>
+                                        </connections>
+                                    </barButtonItem>
                                     <barButtonItem width="75" style="plain" systemItem="fixedSpace" id="mYb-ie-Gub"/>
-                                    <barButtonItem title="Jetpack" id="AZm-Wq-bOj"/>
+                                    <barButtonItem title="Jetpack" id="AZm-Wq-bOj">
+                                        <connections>
+                                            <action selector="jetpackBtn:" destination="BYZ-38-t0r" id="m22-lf-kdh"/>
+                                        </connections>
+                                    </barButtonItem>
                                 </items>
                             </toolbar>
                         </subviews>

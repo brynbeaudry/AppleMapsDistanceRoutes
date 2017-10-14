@@ -10,13 +10,28 @@ import UIKit
 import CoreLocation
 import MapKit
 
-class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDelegate, UIGestureRecognizerDelegate{
-    
+class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDelegate, UIGestureRecognizerDelegate, UIToolbarDelegate{
+    var totalDistance : Double = 0
     var locationManager:CLLocationManager!
     var userLocation:CLLocation!
+    
+    var transportType : MKDirectionsTransportType!
 
     @IBOutlet var mapView: MKMapView!
     @IBOutlet var bottomBtnBar: UIToolbar!
+    
+    @IBAction func driveBtn(_ sender: UIBarButtonItem) {
+        transportType = MKDirectionsTransportType.automobile
+        print("Drive!")
+    }
+    @IBAction func walkBtn(_ sender: UIBarButtonItem) {
+        transportType = MKDirectionsTransportType.automobile
+        print("Walk!")
+    }
+    @IBAction func jetpackBtn(_ sender: UIBarButtonItem) {
+        transportType = nil
+        print("Jetpack!")
+    }
     
     
     override func viewDidLoad() {
@@ -34,6 +49,8 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         mapView.addGestureRecognizer(mapLPRecognizer)
         //I think all UI Controllers have add/remove gesture regonizers.
         
+        bottomBtnBar.delegate = self
+        transportType = nil
         
     }
     
@@ -65,7 +82,85 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         myAnnotation.coordinate = CLLocationCoordinate2DMake(c.latitude, c.longitude);
         myAnnotation.title = "Pin at \(c.latitude), \(c.longitude)"
         mapView.addAnnotation(myAnnotation)
+        checkNumberOfAnnotations()
     }
+    
+    //TODO: Finish this implementation
+    func checkNumberOfAnnotations(){
+        if mapView.annotations.count > 1 {
+            //calculateTotalDistance(annotations : [MKAnnotation]) ->
+            //show popup
+        }else{
+            //show a different popup
+        }
+    }
+    
+    func calculateTotalDistance(annotations : [MKAnnotation]) {
+        if(transportType != nil){
+            for index in 0...annotations.count-1 {
+                if(index != annotations.count){
+                    let locA = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index].coordinate))
+                    let locB = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index + 1].coordinate))
+                    getDirections(start: locA, end: locB)
+                }
+            }
+        }else{
+            for index in 0...annotations.count-1 {
+                if(index != annotations.count){
+                    let locA = CLLocation(latitude: annotations[index].coordinate.latitude, longitude: annotations[index].coordinate.longitude)
+                    let locB = CLLocation(latitude: annotations[index+1].coordinate.latitude, longitude: annotations[index+1].coordinate.longitude)
+                    totalDistance += Double(locA.distance(from: locB))
+                }
+            }
+        }
+         print("Total Distance : \(totalDistance)")
+        //If sleected thing is driving
+    }
+    
+    func getDirections(start: MKMapItem, end: MKMapItem) {
+        
+        let request = MKDirectionsRequest()
+        request.source = start
+        request.transportType = transportType
+        request.destination = end
+        request.requestsAlternateRoutes = false
+        
+        let directions = MKDirections(request: request)
+        
+        directions.calculate(completionHandler: {(response, error) in
+            
+            if error != nil {
+                print("Error getting directions")
+            } else {
+                self.showRoute(response!)
+            }
+        })
+    }
+    
+    func showRoute(_ response: MKDirectionsResponse) {
+        
+        for route in response.routes {
+            
+            mapView.add(route.polyline,
+                         level: MKOverlayLevel.aboveRoads)
+            
+            //for step in route.steps {
+            //    print(step.instructions)
+            //}
+            totalDistance += Double(route.distance)
+        }
+    }
+    
+    func mapView(_ mapView: MKMapView, rendererFor
+        overlay: MKOverlay) -> MKOverlayRenderer {
+        let renderer = MKPolylineRenderer(overlay: overlay)
+        
+        renderer.strokeColor = UIColor.blue
+        renderer.lineWidth = 5.0
+        return renderer
+    }
+    
+    
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -86,28 +181,14 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         
         //determineCurrentLocation()
     }
+    
     func createMapView()
     {
         print("In create MapView")
-        //mapView = MKMapView()
-        /*
-        let leftMargin:CGFloat = 10
-        let topMargin:CGFloat = 60
-        let mapWidth:CGFloat = view.frame.size.width-20
-        let mapHeight:CGFloat = 300
-         */
-        
-        //mapView.frame = CGRectMake(leftMargin, topMargin, mapWidth, mapHeight)
-        
         mapView.mapType = MKMapType.standard
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
         mapView.showsPointsOfInterest = false
-        
-        // Or, if needed, we can position map in the center of the view
-        //mapView.center = view.center
-        //
-        //view.addSubview(mapView)
     }
     
     func determineCurrentLocation()
