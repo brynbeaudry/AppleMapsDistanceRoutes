@@ -85,15 +85,31 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         checkNumberOfAnnotations()
     }
     
+    func popUp() {
+        print("In popup")
+        let alertMessage = UIAlertController(title: "My Title", message: "\n\n\n\n\n\n\n\n\n\n\n\n", preferredStyle: .alert)
+        let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertMessage .addAction(action)
+        self.present(alertMessage, animated: true, completion: nil)
+        
+        //let xPosition = self.view.frame.origin.x + 80
+        let garbage = #imageLiteral(resourceName: "garbage")
+        let imageView = UIImageView(image: garbage)
+        alertMessage.view.addSubview(imageView)
+    }
+    
     //TODO: Finish this implementation
     func checkNumberOfAnnotations(){
         if mapView.annotations.count > 1 {
             //calculateTotalDistance(annotations : [MKAnnotation]) ->
             //show popup
+            popUp()
         }else{
             //show a different popup
         }
     }
+    
+    
     
     func calculateTotalDistance(annotations : [MKAnnotation]) {
         if(transportType != nil){
