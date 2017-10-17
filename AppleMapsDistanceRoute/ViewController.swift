@@ -91,10 +91,12 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         let action = UIAlertAction(title: "OK", style: .default, handler: nil)
         alertMessage .addAction(action)
         self.present(alertMessage, animated: true, completion: nil)
-        
-        //let xPosition = self.view.frame.origin.x + 80
-        let garbage = #imageLiteral(resourceName: "garbage")
-        let imageView = UIImageView(image: garbage)
+        let xPosition = alertMessage.view.frame.origin.x + 80
+        let garbageRes = #imageLiteral(resourceName: "garbage")
+        let rect : CGRect = CGRect(x: xPosition, y: 100, width: 100, height: 100)
+        garbageRes.draw(in: rect)
+        let imageView = UIImageView(frame: rect)
+        imageView.image = garbageRes
         alertMessage.view.addSubview(imageView)
     }
     
