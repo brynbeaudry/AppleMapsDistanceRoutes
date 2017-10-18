@@ -10,12 +10,15 @@ import UIKit
 import CoreLocation
 import MapKit
 
-class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDelegate, UIGestureRecognizerDelegate, UIToolbarDelegate{
-    var totalDistance : Double = 0
+class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate, UIGestureRecognizerDelegate, UIToolbarDelegate{
+    var totalDistance : Double = 0.00
     var locationManager:CLLocationManager!
     var userLocation:CLLocation!
     var points: [CLLocationCoordinate2D] = [CLLocationCoordinate2D]()
-    var polyline : MKPolyline!
+    var overlays : [MKOverlay]!
+    let directionsGroup = DispatchGroup()
+    let routesGroup = DispatchGroup()
+    let calculateAllDistanceGroup = DispatchGroup()
     enum Trans {
         case WALKING
         case JETPACKING
@@ -29,40 +32,51 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
     var transportType : MKDirectionsTransportType!
     var selectTransport : Trans = Trans.JETPACKING
     var popUpState : PopUpState = PopUpState.CLOSED
+    var distType : String = "JetPacking"
 
     @IBOutlet var mapView: MKMapView!
     @IBOutlet var bottomBtnBar: UIToolbar!
     
+    func restoreMap() {
+        mapView.removeAnnotations(mapView.annotations)
+        mapView.removeOverlays(mapView.overlays)
+        points = [CLLocationCoordinate2D]()
+        totalDistance = 0.00
+        distType = determineDistanceType()
+    }
+    
     @IBAction func driveBtn(_ sender: UIBarButtonItem) {
         transportType = MKDirectionsTransportType.automobile
         selectTransport = Trans.DRIVING
+        restoreMap()
         print("Drive!")
-        mapView.removeAnnotations(mapView.annotations)
-        points.removeAll()
+        distType = determineDistanceType()
+        
     }
     @IBAction func walkBtn(_ sender: UIBarButtonItem) {
         transportType = MKDirectionsTransportType.walking
         selectTransport = Trans.WALKING
+        restoreMap()
         print("Walk!")
-        mapView.removeAnnotations(mapView.annotations)
-        points.removeAll()
+        distType = determineDistanceType()
+        
     }
     @IBAction func jetpackBtn(_ sender: UIBarButtonItem) {
         transportType = nil
         selectTransport = Trans.JETPACKING
+        restoreMap()
         print("Jetpack!")
-        mapView.removeAnnotations(mapView.annotations)
-        points.removeAll()
+        distType = determineDistanceType()
+        
     }
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        print("View did Load")
         // Do any additional setup after loading the view, typically from a nib.
         determineCurrentLocation()
         createMapView()
-        
         
         let mapLPRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleMapPress))
         //Where is the UIElem we're listening for taps? This class.
@@ -71,22 +85,53 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         mapLPRecognizer.minimumPressDuration = CFTimeInterval(1.5)
         mapView.addGestureRecognizer(mapLPRecognizer)
         //I think all UI Controllers have add/remove gesture regonizers.
-        
         bottomBtnBar.delegate = self
-        transportType = nil
-        
+        selectTransport = Trans.JETPACKING
     }
     
     @objc func handleMapPress(gestureRecognizer: UILongPressGestureRecognizer) {
         //converts CG Point to LocCoord2d
         print("In handlemap press")
-        if popUpState == PopUpState.CLOSED {
-            popUpState = PopUpState.OPEN
-            self.becomeFirstResponder()
-            let location = gestureRecognizer.location(in: mapView)
-            let coordinate : CLLocationCoordinate2D = mapView.convert(location,toCoordinateFrom: mapView)
-            dropPinAtCoordinate(c: coordinate)
-            checkNumberOfAnnotations()
+        if (gestureRecognizer.state == UIGestureRecognizerState.ended) {
+            NSLog("Long press Ended");
+            if popUpState == PopUpState.CLOSED {
+                popUpState = PopUpState.OPEN
+                self.becomeFirstResponder()
+                let location = gestureRecognizer.location(in: mapView)
+                let coordinate : CLLocationCoordinate2D = mapView.convert(location,toCoordinateFrom: mapView)
+                dropPinAtCoordinate(c: coordinate)
+                print("after drop pin")
+                if mapView.annotations.count > 1 {
+                    if(selectTransport == .JETPACKING){
+                        print("Before calculateJetPackDistance d: \(totalDistance)")
+                        calculateJetPackDistance()
+                        print("After calculateJetPackDistance d: \(totalDistance)")
+                        drawJetPackPolyLine()
+                        distancePopUp()
+                    }else{
+                        //also does overlay
+                        calculateDistanceFromDirections()
+                    }
+                }else{
+                    garGarPopUp()
+                }
+            }
+        }
+    }
+    
+    func distancePopUp(){
+        print("In Distance Popup, distance is \(String(format: "%.2f",totalDistance))")
+        popUp(message: "The \(distType) distance is \(String(format: "%.2f",totalDistance))")
+    }
+    
+    func determineDistanceType() -> String {
+        switch selectTransport {
+        case .JETPACKING:
+            return "Jetpacking"
+        case .DRIVING:
+            return "Driving"
+        case .WALKING:
+            return "Walking"
         }
     }
     
@@ -104,6 +149,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         myAnnotation.coordinate = CLLocationCoordinate2DMake(userLocation.coordinate.latitude, userLocation.coordinate.longitude);
         myAnnotation.title = "Current location"
         mapView.addAnnotation(myAnnotation)
+        print("Annotations count : \(mapView.annotations.count)")
     }
     
     func dropPinAtCoordinate(c : CLLocationCoordinate2D) {
@@ -111,6 +157,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         myAnnotation.coordinate = CLLocationCoordinate2DMake(c.latitude, c.longitude);
         myAnnotation.title = "Pin at \(c.latitude), \(c.longitude)"
         mapView.addAnnotation(myAnnotation)
+        print("Annotations count : \(mapView.annotations.count)")
     }
     
     func dismissPopUp(_ : UIAlertAction) -> Void{
@@ -118,7 +165,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         popUpState = PopUpState.CLOSED
     }
     
-    func popUp(message: String) {
+    func popUp(message: String) -> Void {
         print("In popup")
         var alertText : String = "\n\n\n\n\n\n\n\n\n\n\n\n"
         if(!message.isEmpty){
@@ -139,8 +186,8 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
     }
     
     func garGarPopUp() {
-        print("In popup")
-        let alertMessage = UIAlertController(title: "My Title", message: "\n\n\n\n\n\n\n\n\n\n\n\n", preferredStyle: .alert)
+        print("In gargar popup")
+        let alertMessage = UIAlertController(title: "Garbage", message: "\n\n\n\n\n\n\n\n\n\n\n\n", preferredStyle: .alert)
         let action = UIAlertAction(title: "OK", style: .default, handler: self.dismissPopUp)
         alertMessage .addAction(action)
         self.present(alertMessage, animated: true, completion: nil)
@@ -153,95 +200,94 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         alertMessage.view.addSubview(imageView)
     }
     
-    //TODO: Finish this implementation
-    func checkNumberOfAnnotations(){
-        if mapView.annotations.count > 1 {
-            calculateTotalDistance(annotations : mapView.annotations)
-            //show popup
-            var mode : String
-            switch selectTransport {
-                case .DRIVING:
-                        mode = "driving"
-                case .JETPACKING:
-                        mode = "jetpacking"
-                case .WALKING:
-                        mode = "walking"
-            }
-            let distString = NSString(format: "%.2f", totalDistance)
-            popUp(message: "Total \(mode) Distance : \(distString)")
-        }else{
-            //show a different popup
-            garGarPopUp()
+    func calculateDistanceFromDirections() -> Void {
+        totalDistance = 0.00
+        mapView.removeOverlays(mapView.overlays)
+        let annotations = mapView.annotations
+        let count = (annotations.count-2 < 1) ? 0 : annotations.count-2
+        calculateAllDistanceGroup.enter()
+        for index in 0...count {
+            print("In calc total dist NOT jetpack for loop index : \(index) count: \(count)")
+            let locA = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index].coordinate))
+            let locB = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index + 1].coordinate))
+            getDirections(start: locA, end: locB)
+            if(index == count) {calculateAllDistanceGroup.leave()}
+        }
+        directionsGroup.notify(queue: DispatchQueue.main) {
+            self.distancePopUp()
         }
     }
     
-    
-    
-    func calculateTotalDistance(annotations : [MKAnnotation]) {
-        totalDistance = 0
-        points.removeAll()
-        if(selectTransport != Trans.JETPACKING){
-            for index in 0...annotations.count-2 {
-                    let locA = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index].coordinate))
-                    let locB = MKMapItem.init(placemark: MKPlacemark.init(coordinate: annotations[index + 1].coordinate))
-                    getDirections(start: locA, end: locB)
-            }
-        }else{
-            for index in 0...annotations.count-2 {
-                    points.append(annotations[index].coordinate)
-                    let locA = CLLocation(latitude: annotations[index].coordinate.latitude, longitude: annotations[index].coordinate.longitude)
-                    let locB = CLLocation(latitude: annotations[index+1].coordinate.latitude, longitude: annotations[index+1].coordinate.longitude)
-                    totalDistance += Double(locA.distance(from: locB))
-            }
-            polyline = MKPolyline(coordinates: points, count: points.count)
-            mapView.add(polyline, level: MKOverlayLevel.aboveRoads)
-        }
+    func calculateJetPackDistance() {
+        totalDistance = 0.00
+        points = [CLLocationCoordinate2D]()
+        let annotations = mapView.annotations
         
-         print("Total Distance : \(totalDistance)")
-        //If sleected thing is driving
+        let count = (annotations.count-2 < 1) ? 0 : annotations.count-2
+        for index in 0...count {
+            points.append(annotations[index].coordinate)
+            print("In calc total dist jetpack for loop index : \(index) count: \(count)")
+            let locA = CLLocation(latitude: annotations[index].coordinate.latitude, longitude: annotations[index].coordinate.longitude)
+            let locB = CLLocation(latitude: annotations[index+1].coordinate.latitude, longitude: annotations[index+1].coordinate.longitude)
+            totalDistance += Double(locA.distance(from: locB))
+        }
+        points.append(annotations[annotations.count-1].coordinate)
     }
+    
+    func drawJetPackPolyLine(){
+        print("In drawJetPackPolyLine points.count : \(points.count)")
+        //let c_points = points
+        let polyline = MKPolyline(coordinates: &points, count: points.count)
+        //print("Any points associated with the shape?\(polyline.points())")
+        self.mapView.add(polyline, level: MKOverlayLevel.aboveRoads)
+    }
+
     
     func getDirections(start: MKMapItem, end: MKMapItem) {
-        
+        directionsGroup.enter()
         let request = MKDirectionsRequest()
         request.source = start
         request.transportType = transportType
         request.destination = end
         request.requestsAlternateRoutes = false
-        
         let directions = MKDirections(request: request)
-        
-        directions.calculate(completionHandler: {(response, error) in
-            
-            if error != nil {
-                print("Error getting directions")
-            } else {
-                self.showRoute(response!)
-            }
-        })
-    }
-    
-    func showRoute(_ response: MKDirectionsResponse) {
-        
-        for route in response.routes {
-            
-            mapView.add(route.polyline,
-                         level: MKOverlayLevel.aboveRoads)
-            
-            //for step in route.steps {
-            //    print(step.instructions)
-            //}
-            totalDistance += Double(route.distance)
+        DispatchQueue.main.async{
+            directions.calculate(completionHandler: {(response, error) in
+                if error != nil {
+                    print("Error getting directions")
+                    }else{
+                    self.showRoute(response: response!)
+                    self.directionsGroup.leave()
+                }
+            })
         }
     }
     
-    func mapView(_ mapView: MKMapView, rendererFor
-        overlay: MKOverlay) -> MKOverlayRenderer {
-        let renderer = MKPolylineRenderer(overlay: overlay)
+    func showRoute(response: MKDirectionsResponse) {
+        routesGroup.enter()
+        print(response.routes)
+        for route in response.routes {
+            print("In show routes for loop")
+            totalDistance += Double(route.distance)
+            mapView.add(route.polyline, level: MKOverlayLevel.aboveRoads)
+            print("Route Distance from show route, should be multiple \(route.distance)")
+        }
+        routesGroup.leave()
+    }
+    
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if overlay.isKind(of: MKPolyline.self) {
+            // draw the track
+            print("calling overlay renderer")
+            let polyLine = overlay
+            let polyLineRenderer = MKPolylineRenderer(overlay: polyLine)
+            polyLineRenderer.strokeColor = UIColor.blue
+            polyLineRenderer.lineWidth = 2.0
+            
+            return polyLineRenderer
+        }
         
-        renderer.strokeColor = UIColor.blue
-        renderer.lineWidth = 5.0
-        return renderer
+        return MKPolylineRenderer()
     }
     
     
@@ -254,7 +300,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
+        print("View will appear")
         // Create and Add MapView to our main view
         //createMapView()
         
@@ -262,7 +308,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
+        print("View did appear")
         //determineCurrentLocation()
     }
     
@@ -273,6 +319,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         mapView.isZoomEnabled = true
         mapView.isScrollEnabled = true
         mapView.showsPointsOfInterest = false
+        mapView.delegate = self
     }
     
     func determineCurrentLocation()
@@ -297,9 +344,7 @@ class ViewController: UIViewController, MKMapViewDelegate,  CLLocationManagerDel
         manager.stopUpdatingLocation()
         
         centerMapOnLocation()
-        dropPinAtUserLocation()
-        
-        
+        //dropPinAtUserLocation()
     }
 
     

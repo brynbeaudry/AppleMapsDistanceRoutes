@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0EAD21121F9173AC00EC62BD /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0EAD21111F9173AA00EC62BD /* Default-568h@2x.png */; };
 		3C5D8A271F9137980077BBE8 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5D8A261F9137980077BBE8 /* AppDelegate.swift */; };
 		3C5D8A291F9137980077BBE8 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5D8A281F9137980077BBE8 /* ViewController.swift */; };
 		3C5D8A2C1F9137980077BBE8 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3C5D8A2A1F9137980077BBE8 /* Main.storyboard */; };
@@ -36,7 +35,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		0EAD21111F9173AA00EC62BD /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		3C5D8A231F9137980077BBE8 /* AppleMapsDistanceRoute.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppleMapsDistanceRoute.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C5D8A261F9137980077BBE8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		3C5D8A281F9137980077BBE8 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -81,7 +79,6 @@
 		3C5D8A1A1F9137980077BBE8 = {
 			isa = PBXGroup;
 			children = (
-				0EAD21111F9173AA00EC62BD /* Default-568h@2x.png */,
 				3C5D8A251F9137980077BBE8 /* AppleMapsDistanceRoute */,
 				3C5D8A3D1F9137980077BBE8 /* AppleMapsDistanceRouteTests */,
 				3C5D8A481F9137980077BBE8 /* AppleMapsDistanceRouteUITests */,
@@ -239,7 +236,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3C5D8A341F9137980077BBE8 /* LaunchScreen.storyboard in Resources */,
-				0EAD21121F9173AC00EC62BD /* Default-568h@2x.png in Resources */,
 				3C5D8A311F9137980077BBE8 /* Assets.xcassets in Resources */,
 				3C5D8A2C1F9137980077BBE8 /* Main.storyboard in Resources */,
 			);
