@@ -12,6 +12,7 @@ import MapKit
 
 class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate, UIGestureRecognizerDelegate, UIToolbarDelegate{
     var totalDistance : Double = 0.00
+    var expectedTravelTime : TimeInterval = 0.00
     var locationManager:CLLocationManager!
     var userLocation:CLLocation!
     var points: [CLLocationCoordinate2D] = [CLLocationCoordinate2D]()
@@ -19,6 +20,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     let directionsGroup = DispatchGroup()
     let routesGroup = DispatchGroup()
     let calculateAllDistanceGroup = DispatchGroup()
+    
     enum Trans {
         case WALKING
         case JETPACKING
@@ -33,6 +35,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     var selectTransport : Trans = Trans.JETPACKING
     var popUpState : PopUpState = PopUpState.CLOSED
     var distType : String = "JetPacking"
+    var Eta : TimeInterval = 0.0
 
     @IBOutlet var mapView: MKMapView!
     @IBOutlet var bottomBtnBar: UIToolbar!
@@ -89,6 +92,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         selectTransport = Trans.JETPACKING
     }
     
+    
     @objc func handleMapPress(gestureRecognizer: UILongPressGestureRecognizer) {
         //converts CG Point to LocCoord2d
         print("In handlemap press")
@@ -104,6 +108,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 if mapView.annotations.count > 1 {
                     if(selectTransport == .JETPACKING){
                         print("Before calculateJetPackDistance d: \(totalDistance)")
+                        //also calculates ETA
                         calculateJetPackDistance()
                         print("After calculateJetPackDistance d: \(totalDistance)")
                         drawJetPackPolyLine()
@@ -119,9 +124,25 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
     }
     
+    func formattedMinHourSecString(n : TimeInterval) -> String {
+        let minute:TimeInterval = 60.0
+        let hour:TimeInterval = 60.0 * minute
+        let day:TimeInterval = 24 * hour
+        let days = floor(n/day)
+        let hourSecs = n.truncatingRemainder(dividingBy: day)
+        let hours = floor(hourSecs/hour)
+        let minuteSecs = hourSecs.truncatingRemainder(dividingBy: hour)
+        let minutes = floor(minuteSecs/minute)
+        if(days < 1){
+            return String(format: "%.0f Hours and %.0f Minutes", hours, minutes)
+        }else{
+            return String(format: "%.0f Days, %.0f Hours and %.0f Minutes", days, hours, minutes)
+        }
+    }
+    
     func distancePopUp(){
         print("In Distance Popup, distance is \(String(format: "%.2f",totalDistance))")
-        popUp(message: "The \(distType) distance is \(String(format: "%.2f",totalDistance))")
+        popUp(message: "The \(distType) distance is \(String(format: "%.2f km",totalDistance/1000))\nThe expected Travel Time is \(formattedMinHourSecString(n: expectedTravelTime))")
     }
     
     func determineDistanceType() -> String {
@@ -218,8 +239,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
     }
     
+    //also calculates eta
     func calculateJetPackDistance() {
         totalDistance = 0.00
+        expectedTravelTime = 0.00
         points = [CLLocationCoordinate2D]()
         let annotations = mapView.annotations
         
@@ -229,7 +252,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             print("In calc total dist jetpack for loop index : \(index) count: \(count)")
             let locA = CLLocation(latitude: annotations[index].coordinate.latitude, longitude: annotations[index].coordinate.longitude)
             let locB = CLLocation(latitude: annotations[index+1].coordinate.latitude, longitude: annotations[index+1].coordinate.longitude)
-            totalDistance += Double(locA.distance(from: locB))
+            let abDist = Double(locA.distance(from: locB))
+            totalDistance += abDist
+            //assuming jetpacks go 75km perhour
+            expectedTravelTime += abDist/75000
         }
         points.append(annotations[annotations.count-1].coordinate)
     }
@@ -255,9 +281,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             directions.calculate(completionHandler: {(response, error) in
                 if error != nil {
                     print("Error getting directions")
+                        self.directionsGroup.leave()
                     }else{
-                    self.showRoute(response: response!)
-                    self.directionsGroup.leave()
+                        self.showRoute(response: response!)
+                        self.directionsGroup.leave()
                 }
             })
         }
@@ -269,11 +296,13 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         for route in response.routes {
             print("In show routes for loop")
             totalDistance += Double(route.distance)
+            expectedTravelTime += route.expectedTravelTime
             mapView.add(route.polyline, level: MKOverlayLevel.aboveRoads)
             print("Route Distance from show route, should be multiple \(route.distance)")
         }
         routesGroup.leave()
     }
+    
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if overlay.isKind(of: MKPolyline.self) {
@@ -286,7 +315,6 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             
             return polyLineRenderer
         }
-        
         return MKPolylineRenderer()
     }
     
