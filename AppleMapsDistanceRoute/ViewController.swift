@@ -128,11 +128,11 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         let minute:TimeInterval = 60.0
         let hour:TimeInterval = 60.0 * minute
         let day:TimeInterval = 24 * hour
-        let days = floor(n/day)
+        let days = n/day
         let hourSecs = n.truncatingRemainder(dividingBy: day)
-        let hours = floor(hourSecs/hour)
+        let hours = hourSecs/hour
         let minuteSecs = hourSecs.truncatingRemainder(dividingBy: hour)
-        let minutes = floor(minuteSecs/minute)
+        let minutes = minuteSecs/minute
         if(days < 1){
             return String(format: "%.0f Hours and %.0f Minutes", hours, minutes)
         }else{
@@ -253,9 +253,12 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             let locA = CLLocation(latitude: annotations[index].coordinate.latitude, longitude: annotations[index].coordinate.longitude)
             let locB = CLLocation(latitude: annotations[index+1].coordinate.latitude, longitude: annotations[index+1].coordinate.longitude)
             let abDist = Double(locA.distance(from: locB))
+            //in meteres
             totalDistance += abDist
             //assuming jetpacks go 75km perhour
-            expectedTravelTime += abDist/75000
+            // so thats like 20.8333 meteres per second, which is nice because the total distance is in meters
+            // so time = speed times dist
+            expectedTravelTime += (abDist/20.8333)
         }
         points.append(annotations[annotations.count-1].coordinate)
     }
